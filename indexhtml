@@ -1,0 +1,1045 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Heart, Music, VolumeX, Volume2, Sparkles, ChevronDown, BookOpen, Star, Sparkle, X, Check, Eye } from 'lucide-react';
+
+// Custom Type for falling canvas particles
+interface Particle {
+  x: number;
+  y: number;
+  size: number;
+  speedX: number;
+  speedY: number;
+  opacity: number;
+  rotation: number;
+  rotationSpeed: number;
+  type: 'sakura' | 'rose_petal' | 'heart' | 'sparkle';
+  wiggle: number;
+  wiggleSpeed: number;
+  color: string;
+}
+
+// Procedural sound synthesizer using Web Audio API to create a beautiful,
+// romantic and heartwarming soundtrack for Yumna without any broken external music links.
+class RomanticSynthesizer {
+  private ctx: AudioContext | null = null;
+  private isPlaying = false;
+  private chordsTimeout: any = null;
+  private gainNode: GainNode | null = null;
+
+  start() {
+    if (this.ctx && this.isPlaying) return;
+    try {
+      this.ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+      this.isPlaying = true;
+
+      // Stereo delay for modern ambient field
+      const delay = this.ctx.createDelay(2.0);
+      delay.delayTime.value = 0.55;
+      
+      const delayFeedback = this.ctx.createGain();
+      delayFeedback.gain.value = 0.4;
+
+      const delayFilter = this.ctx.createBiquadFilter();
+      delayFilter.type = 'lowpass';
+      delayFilter.frequency.value = 900;
+
+      this.gainNode = this.ctx.createGain();
+      this.gainNode.gain.value = 0.12; // Low soft ambient volume
+
+      // Connect delay loop
+      delay.connect(delayFilter);
+      delayFilter.connect(delayFeedback);
+      delayFeedback.connect(delay);
+
+      this.gainNode.connect(this.ctx.destination);
+      delay.connect(this.gainNode);
+      this.gainNode.connect(delay);
+
+      this.playCycle();
+    } catch (e) {
+      console.warn("Web Audio API failed to load", e);
+    }
+  }
+
+  stop() {
+    this.isPlaying = false;
+    if (this.chordsTimeout) clearTimeout(this.chordsTimeout);
+    if (this.ctx) {
+      try {
+        this.ctx.close();
+      } catch (e) {
+        // Safe check
+      }
+      this.ctx = null;
+    }
+  }
+
+  private playTone(freq: number, startTime: number, duration: number, type: OscillatorType, velocity = 1.0) {
+    if (!this.ctx || !this.gainNode) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const env = this.ctx.createGain();
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      // Warm pitch modulation for gentle dreamy music box texture
+      if (type === 'sine') {
+        const vibrato = this.ctx.createOscillator();
+        const vibratoGain = this.ctx.createGain();
+        vibrato.frequency.value = 4.8; 
+        vibratoGain.gain.value = 1.5; 
+        vibrato.connect(vibratoGain);
+        vibratoGain.connect(osc.frequency);
+        vibrato.start(startTime);
+        vibrato.stop(startTime + duration);
+      }
+
+      // Smooth custom audio envelope
+      env.gain.setValueAtTime(0, startTime);
+      env.gain.linearRampToValueAtTime(0.18 * velocity, startTime + 0.1); 
+      env.gain.exponentialRampToValueAtTime(0.001, startTime + duration); 
+
+      osc.connect(env);
+      env.connect(this.gainNode);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    } catch (e) {
+      // Audio node failure fallback
+    }
+  }
+
+  private playCycle() {
+    // Beautiful romantic chord progression matching elegant themes (Fmaj7 -> G6 -> Em7 -> Am7)
+    const progressions = [
+      [174.61, 220.00, 261.63, 329.63], // Fmaj7 (F3, A3, C4, E4)
+      [196.00, 246.94, 293.66, 392.00], // G6 (G3, B3, D4, G4)
+      [164.81, 196.00, 246.94, 293.66], // Em7 (E3, G3, B3, D4)
+      [220.00, 261.63, 329.63, 392.00]  // Am7 (A3, C4, E4, G4)
+    ];
+
+    // Uplifting sweet pentatonic melodies
+    const melodies = [
+      [523.25, 587.33, 659.25, 783.99], // C5, D5, E5, G5
+      [587.33, 659.25, 783.99, 880.00], // D5, E5, G5, A5
+      [659.25, 783.99, 880.00, 987.77], // E5, G5, A5, B5
+      [783.99, 880.00, 1046.50, 1174.66] // G5, A5, C6, D6
+    ];
+
+    let step = 0;
+    const run = () => {
+      if (!this.isPlaying || !this.ctx) return;
+      
+      const now = this.ctx.currentTime;
+      const currentChord = progressions[step % progressions.length];
+      
+      // Gentle arpeggiated piano backing
+      currentChord.forEach((freq, i) => {
+        this.playTone(freq, now + i * 0.08, 3.8, 'triangle', 0.4);
+      });
+
+      // Uplifting melodic accents
+      const melodyNotes = melodies[step % melodies.length];
+      const distribution = [0, 0.8, 1.6, 2.4];
+      melodyNotes.forEach((freq, idx) => {
+        if (Math.random() > 0.15) {
+          this.playTone(freq, now + distribution[idx], 2.0, 'sine', 0.65);
+        }
+      });
+
+      step++;
+      this.chordsTimeout = setTimeout(run, 4200);
+    };
+
+    run();
+  }
+}
+
+// Global synth instance
+const romanticMusic = new RomanticSynthesizer();
+
+export default function App() {
+  const [hasEntered, setHasEntered] = useState(false);
+  const [isPlayingMusic, setIsPlayingMusic] = useState(false);
+  const [showHeartModal, setShowHeartModal] = useState(false);
+  
+  // Interactive Reasons I Love You Carousel
+  const [activeReasonIndex, setActiveReasonIndex] = useState(0);
+  const [totalExplodedHearts, setTotalExplodedHearts] = useState(0);
+  
+  // Stage controller for Opening typewriter lines
+  const [typewriterStage, setTypewriterStage] = useState(0);
+  const [typewriterCompleted, setTypewriterCompleted] = useState(false);
+  
+  // Custom Canvas Background particle controller
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const particles = useRef<Particle[]>([]);
+  const isHeavyRainActive = useRef(false);
+
+  // Romantic list of infinite reasons
+  const loveReasons = [
+    "The peaceful barakah your beautiful presence brings into my ordinary days.",
+    "The way your gentle laugh lights up my heart and washes away any grief.",
+    "Your beautiful, kind eyes that mirror a pure and sincere soul.",
+    "How you make me want to be the best and most faithful version of myself every day.",
+    "The sweet comfort in your soft voice that always restores my tranquility.",
+    "How deeply you care about our deen, striving together towards Jannah.",
+    "Your endless patience and the graceful warmth with which you handle my soul.",
+    "Simply because you entered my life like a refreshing spring after the longest winter.",
+    "The cute, magical way you smile when you are genuinely happy.",
+    "How every prayer I make for you brings an instant calm that stays with me.",
+    "The effortless connection we share, making ordinary silences feel extraordinary.",
+    "How you protect my peace and support my dreams with unshakeable devotion.",
+    "Because Allah hand-wrote your beautiful name in the chapters of my destiny.",
+    "The warmth and absolute comfort of your care, a true shelter in this world.",
+    "Your sincere heart, your pure mind, and every glorious detail of who you are."
+  ];
+
+  // Particle Generation Setup
+  const createParticle = (width: number, height: number, spawnAtTop = false, forceType?: Particle['type']): Particle => {
+    const types: Particle['type'][] = ['sakura', 'rose_petal', 'heart', 'sparkle'];
+    const selectedType = forceType || (Math.random() < 0.6 ? 'sakura' : Math.random() < 0.8 ? 'rose_petal' : Math.random() < 0.95 ? 'sparkle' : 'heart');
+    
+    let size = Math.random() * 8 + 6;
+    if (selectedType === 'heart') size = Math.random() * 10 + 8;
+    if (selectedType === 'sparkle') size = Math.random() * 5 + 357 / 100;
+
+    // Sakura colors
+    const sakuraColors = ['#ffccd5', '#ffb7c5', '#ffe5ec', '#fff0f3'];
+    // Rose colors
+    const roseColors = ['#d94a62', '#b76e79', '#da6a7e', '#a03143'];
+    // Heart colors
+    const heartColors = ['#ff4d6d', '#ff758f', '#ff85a1', '#ff9ebb', '#e5195e'];
+    // Sparkle colors
+    const goldColors = ['#ffd166', '#ffb703', '#ffffff', '#ffd000'];
+
+    let color = '';
+    if (selectedType === 'sakura') color = sakuraColors[Math.floor(Math.random() * sakuraColors.length)];
+    else if (selectedType === 'rose_petal') color = roseColors[Math.floor(Math.random() * roseColors.length)];
+    else if (selectedType === 'heart') color = heartColors[Math.floor(Math.random() * heartColors.length)];
+    else color = goldColors[Math.floor(Math.random() * goldColors.length)];
+
+    return {
+      x: Math.random() * width,
+      y: spawnAtTop ? -20 : Math.random() * height,
+      size,
+      speedX: Math.random() * 1.5 - 0.75,
+      speedY: Math.random() * 1.5 + 1.2, // falling speed
+      opacity: Math.random() * 0.7 + 0.3,
+      rotation: Math.random() * Math.PI * 2,
+      rotationSpeed: (Math.random() * 0.02 - 0.01) * 2,
+      type: selectedType,
+      wiggle: Math.random() * Math.PI,
+      wiggleSpeed: Math.random() * 0.02 + 0.01,
+      color
+    };
+  };
+
+  // Setup falling particles and drawing loops
+  useEffect(() => {
+    const handleResize = () => {
+      if (!canvasRef.current) return;
+      canvasRef.current.width = window.innerWidth;
+      canvasRef.current.height = window.innerHeight;
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Build initial population of 250 particles for a wonderful visual backdrop
+    const initialCount = 200;
+    for (let i = 0; i < initialCount; i++) {
+      particles.current.push(createParticle(canvas.width, canvas.height, false));
+    }
+
+    let animationFrameId: number;
+
+    const render = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Handle custom heavy rain toggle when scrolling near bottom
+      const targetCount = isHeavyRainActive.current ? 400 : 200;
+      if (particles.current.length < targetCount && Math.random() < (isHeavyRainActive.current ? 0.7 : 0.3)) {
+        particles.current.push(createParticle(canvas.width, canvas.height, true));
+      }
+
+      // Update & Draw Particles
+      particles.current.forEach((p, idx) => {
+        p.y += p.speedY * (isHeavyRainActive.current ? 1.5 : 1);
+        p.wiggle += p.wiggleSpeed;
+        p.x += p.speedX + Math.sin(p.wiggle) * 0.4;
+        p.rotation += p.rotationSpeed;
+
+        // Draw depending on type
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.globalAlpha = p.opacity;
+
+        if (p.type === 'sakura' || p.type === 'rose_petal') {
+          // Draw high-fidelity curved falling petals
+          ctx.beginPath();
+          ctx.ellipse(0, 0, p.size * 1.4, p.size * 0.8, 0, 0, Math.PI * 2);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+          
+          // Draw subtle petal vein/accent
+          ctx.beginPath();
+          ctx.moveTo(-p.size * 1.2, 0);
+          ctx.lineTo(p.size * 1.2, 0);
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        } else if (p.type === 'heart') {
+          // Draw smooth high-fashion vector hearts
+          ctx.beginPath();
+          ctx.moveTo(0, -p.size / 4);
+          ctx.bezierCurveTo(-p.size / 2, -p.size, -p.size, -p.size / 2, 0, p.size);
+          ctx.bezierCurveTo(p.size, -p.size / 2, p.size / 2, -p.size, 0, -p.size / 4);
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        } else if (p.type === 'sparkle') {
+          // Glow effect for magical sparkles
+          ctx.shadowBlur = 10;
+          ctx.shadowColor = p.color;
+          
+          ctx.beginPath();
+          for (let k = 0; k < 4; k++) {
+            ctx.lineTo(Math.cos(k * Math.PI / 2) * p.size, Math.sin(k * Math.PI / 2) * p.size);
+            ctx.lineTo(Math.cos(k * Math.PI / 2 + Math.PI / 4) * (p.size / 2.5), Math.sin(k * Math.PI / 2 + Math.PI / 4) * (p.size / 2.5));
+          }
+          ctx.closePath();
+          ctx.fillStyle = p.color;
+          ctx.fill();
+        }
+
+        ctx.restore();
+
+        // Recycle particles when they fall off screen
+        if (p.y > canvas.height + 20 || p.x < -20 || p.x > canvas.width + 20) {
+          particles.current[idx] = createParticle(canvas.width, canvas.height, true);
+        }
+      });
+
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  // Automatic typewriter schedule
+  useEffect(() => {
+    if (hasEntered) return;
+    
+    const timers = [
+      setTimeout(() => setTypewriterStage(1), 1200), // "My dearest Yumna..." 
+      setTimeout(() => setTypewriterStage(2), 3500), // "In every prayer, I find your name..."
+      setTimeout(() => setTypewriterStage(3), 5800), // "In every sunrise, I search for your smile..."
+      setTimeout(() => setTypewriterStage(4), 8100), // "In every dream, I see your beautiful eyes..."
+      setTimeout(() => setTypewriterCompleted(true), 11200) // Transition into final combined message
+    ];
+
+    return () => timers.forEach(t => clearTimeout(t));
+  }, [hasEntered]);
+
+  // Track scrolling to trigger heavy sakura rain and gorgeous glow moon
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY;
+      const windowHeight = window.innerHeight;
+      const fullHeight = document.documentElement.scrollHeight;
+      
+      // If user has scrolled past 70% of the page
+      if (scrollPosition + windowHeight >= fullHeight - 150) {
+        isHeavyRainActive.current = true;
+      } else {
+        isHeavyRainActive.current = false;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Soft romantic music controller
+  const handleToggleMusic = () => {
+    if (isPlayingMusic) {
+      romanticMusic.stop();
+      setIsPlayingMusic(false);
+    } else {
+      romanticMusic.start();
+      setIsPlayingMusic(true);
+    }
+  };
+
+  // Screen click handler for Heart Explosion dynamic particles
+  const handleScreenClick = (e: React.MouseEvent) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // Generate beautiful cursor hearts bursts at clicked coords
+    const count = 18;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.4 - 0.2);
+      const velocity = Math.random() * 3 + 1.5;
+      
+      const p: Particle = {
+        x: e.clientX,
+        y: e.clientY,
+        size: Math.random() * 8 + 6,
+        speedX: Math.cos(angle) * velocity,
+        speedY: Math.sin(angle) * velocity - 1.2, // slightly drift upward
+        opacity: 1,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: Math.random() * 0.08 - 0.04,
+        type: 'heart',
+        wiggle: Math.random() * Math.PI,
+        wiggleSpeed: 0.05,
+        color: ['#ff4d6d', '#ff758f', '#ff85a1', '#ff9ebb', '#ff0a54', '#ffced6'][Math.floor(Math.random() * 6)]
+      };
+      
+      particles.current.push(p);
+    }
+
+    setTotalExplodedHearts(prev => prev + count);
+
+    // Limit floating vector particle length to protect memory performance
+    if (particles.current.length > 500) {
+      particles.current.splice(0, 50);
+    }
+  };
+
+  // Heart trigger helper
+  const handleHeartExplosionStatic = (cx: number, cy: number) => {
+    const count = 35;
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.3 - 0.15);
+      const velocity = Math.random() * 5 + 2;
+      
+      const p: Particle = {
+        x: cx,
+        y: cy,
+        size: Math.random() * 10 + 6,
+        speedX: Math.cos(angle) * velocity,
+        speedY: Math.sin(angle) * velocity - 1.5,
+        opacity: 1,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: Math.random() * 0.1 - 0.05,
+        type: 'heart',
+        wiggle: Math.random() * Math.PI,
+        wiggleSpeed: 0.04,
+        color: ['#ff4d6d', '#ff758f', '#ff85a1', '#ff9ebb', '#ffd166', '#ffb7c5'][Math.floor(Math.random() * 6)]
+      };
+      particles.current.push(p);
+    }
+    setTotalExplodedHearts(prev => prev + count);
+  };
+
+  // Function to smoothly transition past introduction typewriter screens
+  const enterMyHeartWorld = () => {
+    setHasEntered(true);
+    // Start gorgeous soundtrack play
+    if (!isPlayingMusic) {
+      romanticMusic.start();
+      setIsPlayingMusic(true);
+    }
+  };
+
+  return (
+    <div 
+      className="min-h-screen relative text-neutral-800 transition-all duration-1000 ease-in-out cursor-default overflow-hidden select-none"
+      onClick={handleScreenClick}
+      style={{
+        background: hasEntered 
+          ? 'radial-gradient(circle at 50% 30%, #fff7f8 0%, #ffe9ec 50%, #ffd0d6 100%)' 
+          : '#070304'
+      }}
+    >
+      {/* Absolute background Canvas particle runner */}
+      <canvas 
+        ref={canvasRef} 
+        className="fixed top-0 left-0 w-full h-full pointer-events-none z-10" 
+      />
+
+      {/* Floating Control Hub: Music & Stats */}
+      {hasEntered && (
+        <motion.div 
+          className="fixed top-6 right-6 z-50 flex items-center gap-4"
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          {/* Real-time Hearts Exploded Counter */}
+          <div className="hidden sm:flex items-center gap-2 bg-white/70 backdrop-blur-md px-4 py-2 rounded-full border border-[#ffccd5] shadow-sm text-xs font-medium text-[#b76e79]">
+            <Heart className="w-3.5 h-3.5 fill-[#ff4d6d] text-[#ff4d6d] animate-pulse" />
+            <span>Sparks Generated: <span className="font-bold text-[#a03143]">{totalExplodedHearts}</span></span>
+          </div>
+
+          {/* Luxury Music Toggle Button */}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleToggleMusic();
+            }}
+            id="musicToggler"
+            className="p-3.5 rounded-full bg-white/85 hover:bg-pink-50 text-[#b76e79] hover:text-[#a03143] border border-[#ffccd5] hover:border-[#b76e79] shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center cursor-pointer group"
+            title="Romantic Music Options"
+          >
+            {isPlayingMusic ? (
+              <Volume2 className="w-5 h-5 animate-soft-pulse" />
+            ) : (
+              <VolumeX className="w-5 h-5 text-gray-400 group-hover:text-pink-400" />
+            )}
+          </button>
+        </motion.div>
+      )}
+
+      {/* Interactive Cherry Blossom Branch Overlays (Sways gracefully via pure CSS animations) */}
+      {hasEntered && (
+        <>
+          {/* Top Left Sg Branch */}
+          <div className="absolute top-0 left-0 w-48 sm:w-80 h-auto pointer-events-none z-20 opacity-90 animate-sway">
+            <svg 
+              viewBox="0 0 300 200" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="w-full h-auto drop-shadow-sm filter hue-rotate-15"
+            >
+              <path d="M0 0C40 20 100 30 180 15C220 7 240 2 280 18" stroke="#5d4037" strokeWidth="6" strokeLinecap="round" />
+              <path d="M80 10C110 25 150 45 160 70" stroke="#5d4037" strokeWidth="4" strokeLinecap="round" />
+              <path d="M140 12C170 20 210 32 230 55" stroke="#5d4037" strokeWidth="3" strokeLinecap="round" />
+              {/* Sakura blossoms on branch */}
+              <circle cx="90" cy="18" r="8" fill="#ffb7c5" opacity="0.95" />
+              <circle cx="92" cy="16" r="4" fill="#fff" opacity="0.95" />
+              <circle cx="130" cy="24" r="10" fill="#ffa6c9" opacity="0.9" />
+              <circle cx="160" cy="16" r="12" fill="#ff9ebb" opacity="0.95" />
+              <circle cx="158" cy="14" r="6" fill="#fff" opacity="0.95" />
+              <circle cx="190" cy="14" r="9" fill="#ffb7c5" opacity="0.9" />
+              <circle cx="230" cy="12" r="7" fill="#ff9ebb" opacity="0.85" />
+              <circle cx="120" cy="45" r="11" fill="#ffa6c9" opacity="0.95" />
+              <circle cx="118" cy="43" r="5" fill="#fff" opacity="0.9" />
+              <circle cx="150" cy="58" r="8" fill="#ffccd5" opacity="0.9" />
+              <circle cx="210" cy="38" r="10" fill="#ffb7c5" opacity="0.9" />
+            </svg>
+          </div>
+
+          {/* Top Right Sg Branch */}
+          <div className="absolute top-0 right-0 w-48 sm:w-80 h-auto pointer-events-none z-20 opacity-90 animate-sway-reverse">
+            <svg 
+              viewBox="0 0 300 200" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg" 
+              className="w-full h-auto drop-shadow-sm filter scale-x-[-1]"
+            >
+              <path d="M0 0C40 20 100 30 180 15C220 7 240 2 280 18" stroke="#5d4037" strokeWidth="6" strokeLinecap="round" />
+              <path d="M80 10C110 25 150 45 160 70" stroke="#5d4037" strokeWidth="4" strokeLinecap="round" />
+              <path d="M140 12C170 20 210 32 230 55" stroke="#5d4037" strokeWidth="3" strokeLinecap="round" />
+              {/* Blossoms */}
+              <circle cx="90" cy="18" r="8" fill="#ffb7c5" opacity="0.95" />
+              <circle cx="130" cy="24" r="10" fill="#ffa6c9" opacity="0.9" />
+              <circle cx="160" cy="16" r="12" fill="#ffccd5" opacity="0.95" />
+              <circle cx="190" cy="14" r="9" fill="#ff9ebb" opacity="0.9" />
+              <circle cx="120" cy="45" r="11" fill="#ffb7c5" opacity="0.95" />
+              <circle cx="150" cy="58" r="8" fill="#ffa6c9" opacity="0.9" />
+              <circle cx="210" cy="38" r="10" fill="#ffccd5" opacity="0.9" />
+            </svg>
+          </div>
+        </>
+      )}
+
+      {/* Screen 1: The Cinematic Opening Typewriter Storybook */}
+      <AnimatePresence>
+        {!hasEntered && (
+          <motion.div 
+            className="fixed inset-0 w-full h-full z-45 bg-[#0a0506] flex flex-col items-center justify-center px-4"
+            exit={{ opacity: 0, y: -40 }}
+            transition={{ duration: 1.2, ease: 'easeInOut' }}
+          >
+            <div className="max-w-2xl w-full flex flex-col items-center justify-center text-center space-y-12">
+              
+              {/* Main fading typewriter segments */}
+              <div className="space-y-6 md:space-y-8 min-h-[300px] flex flex-col justify-center">
+                
+                {/* Line 1 */}
+                <AnimatePresence>
+                  {typewriterStage >= 1 && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 15 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="font-handwritten text-4xl md:text-5xl lg:text-6xl text-[#ffccd5] drop-shadow-[0_2px_15px_rgba(255,183,197,0.3)] tracking-wide"
+                    >
+                      "My dearest Yumna..."
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {/* Line 2 */}
+                <AnimatePresence>
+                  {typewriterStage >= 2 && !typewriterCompleted && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8 }}
+                      className="font-serif text-[15px] sm:text-lg md:text-xl text-[#f3dae1] font-light italic tracking-wider leading-relaxed"
+                    >
+                      "In every prayer, I find your name."
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {/* Line 3 */}
+                <AnimatePresence>
+                  {typewriterStage >= 3 && !typewriterCompleted && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8 }}
+                      className="font-serif text-[15px] sm:text-lg md:text-xl text-[#f3dae1] font-light italic tracking-wider leading-relaxed"
+                    >
+                      "In every sunrise, I search for your smile."
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {/* Line 4 */}
+                <AnimatePresence>
+                  {typewriterStage >= 4 && !typewriterCompleted && (
+                    <motion.p
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8 }}
+                      className="font-serif text-[15px] sm:text-lg md:text-xl text-[#f3dae1] font-light italic tracking-wider leading-relaxed"
+                    >
+                      "In every dream, I see your beautiful eyes."
+                    </motion.p>
+                  )}
+                </AnimatePresence>
+
+                {/* Combined final message that emerges in ultimate romantic glow */}
+                <AnimatePresence>
+                  {typewriterCompleted && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 1.5, ease: "easeOut" }}
+                      className="py-6 px-4 md:px-8 bg-black/40 border border-[#ffb7c5]/20 rounded-2xl backdrop-blur-md shadow-2xl space-y-6"
+                    >
+                      <Sparkle className="w-6 h-6 text-[#ffd166] mx-auto animate-spin" style={{ animationDuration: '6s' }} />
+                      
+                      <p className="font-serif text-lg sm:text-2xl md:text-3xl lg:text-4xl text-transparent bg-clip-text bg-gradient-to-r from-[#ffe5ec] via-[#ffb7c5] to-[#ffd166] leading-relaxed font-semibold drop-shadow-[0_2px_12px_rgba(255,183,197,0.4)] px-3">
+                        "You are my favorite chapter in the story Allah wrote for me."
+                      </p>
+                      
+                      <p className="font-sans text-xs text-rose-300/60 uppercase tracking-[0.25em]">
+                        Written from the depths of the heart
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
+              {/* Enter Button (Fades in slightly after steps) */}
+              <AnimatePresence>
+                {typewriterStage >= 2 && (
+                  <motion.button
+                    id="openHeartIntro"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.5, duration: 0.8 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleHeartExplosionStatic(window.innerWidth / 2, window.innerHeight / 2);
+                      enterMyHeartWorld();
+                    }}
+                    className="relative group px-8 py-4 bg-gradient-to-r from-[#b76e79] to-[#8c525a] hover:from-[#da6a7e] hover:to-[#a03143] rounded-full text-white font-medium shadow-[0_4px_25px_rgba(183,110,121,0.4)] hover:shadow-[0_4px_35px_rgba(218,106,126,0.6)] border border-[#ffccd5]/30 cursor-pointer transition-all duration-300 select-none overflow-hidden"
+                  >
+                    <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <span className="relative flex items-center gap-2 text-md tracking-widest font-serif uppercase">
+                      Open My Heart
+                      <Heart className="w-4.5 h-4.5 fill-current animate-pulse text-pink-200" />
+                    </span>
+                  </motion.button>
+                )}
+              </AnimatePresence>
+
+              {/* Small music feedback note at initial start */}
+              <p className="text-white/30 text-[11px] font-sans tracking-widest uppercase">
+                * Features ambient handcrafted piano soundtrack
+              </p>
+
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Screen 2: The Fully Interactive Luxury Showcase (Scrollable) */}
+      <AnimatePresence>
+        {hasEntered && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1 }}
+            className="relative z-20 min-h-screen flex flex-col justify-between items-center"
+          >
+            {/* Elegant Top Title / Header */}
+            <header className="w-full max-w-4xl px-6 pt-16 pb-10 text-center flex flex-col items-center">
+              <motion.div
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 100, delay: 0.1 }}
+                className="inline-block p-1 bg-gradient-to-tr from-[#ffe5ec] to-[#fff] rounded-full shadow-inner mb-4"
+              >
+                <div className="px-5 py-1.5 rounded-full bg-white/40 backdrop-blur-md border border-white/60 text-[11px] sm:text-xs font-semibold tracking-[0.25em] text-[#b76e79] uppercase flex items-center gap-2">
+                  <Sparkles className="w-3.5 h-3.5 fill-[#ffd166] text-[#ffd166]" />
+                  For My Beloved Yumna
+                  <Sparkles className="w-3.5 h-3.5 fill-[#ffd166] text-[#ffd166]" />
+                </div>
+              </motion.div>
+              
+              <motion.h1 
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.2, duration: 0.8 }}
+                className="font-handwritten text-5xl sm:text-7xl md:text-8xl text-transparent bg-clip-text bg-gradient-to-r from-[#b76e79] via-[#8c525a] to-[#a03143] tracking-wide mb-2 filter drop-shadow-[0_2px_4px_rgba(255,183,197,0.3)]"
+              >
+                Yumna & Asim
+              </motion.h1>
+
+              <motion.div 
+                className="w-24 h-[1.5px] bg-gradient-to-r from-transparent via-[#b76e79] to-transparent my-3"
+                initial={{ width: 0 }}
+                animate={{ width: 96 }}
+                transition={{ delay: 0.4, duration: 1 }}
+              />
+
+              <motion.p
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5, duration: 0.8 }}
+                className="font-serif text-sm sm:text-md italic text-slate-600/90 tracking-widest max-w-lg leading-relaxed uppercase"
+              >
+                "Where our souls find perfect serene home in each other."
+              </motion.p>
+            </header>
+
+            {/* Layout Grid container: Scrollable Love Letter & Interactive Features */}
+            <main className="w-full max-w-5xl px-4 sm:px-6 flex flex-col items-center gap-14 py-8 relative">
+              
+              {/* Part A: Main Exquisite Love Letter Section */}
+              <motion.section 
+                initial={{ y: 40, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3, duration: 0.9 }}
+                className="relative w-full max-w-3xl"
+              >
+                {/* Visual Glassmorphic Letter Background Frame */}
+                <div className="absolute inset-0 bg-white/45 backdrop-blur-xl rounded-3xl border border-white/70 shadow-2xl shadow-pink-100/40 pointer-events-none" />
+                
+                {/* Pure Rose Gold Fine Line Borders */}
+                <div className="absolute inset-2 border border-[#ffe5ec] rounded-[22px] pointer-events-none" />
+                <div className="absolute inset-3 border border-[#ffccd5]/50 rounded-[18px] pointer-events-none" />
+
+                {/* Corner floral design helpers */}
+                <div className="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-[#b76e79]/40 rounded-tl-lg pointer-events-none" />
+                <div className="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-[#b76e79]/40 rounded-tr-lg pointer-events-none" />
+                <div className="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-[#b76e79]/40 rounded-bl-lg pointer-events-none" />
+                <div className="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-[#b76e79]/40 rounded-br-lg pointer-events-none" />
+
+                <div className="relative z-10 px-6 sm:px-12 py-12 sm:py-16 text-center space-y-8 select-text">
+                  
+                  {/* Heart logo top decorative */}
+                  <div className="flex justify-center -mt-4 mb-2">
+                    <motion.div 
+                      className="p-3 bg-pink-100/40 rounded-full border border-pink-200/50"
+                      whileHover={{ scale: 1.15 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleHeartExplosionStatic(window.innerWidth / 2, window.innerHeight * 0.4);
+                      }}
+                    >
+                      <Heart className="w-7 h-7 fill-[#ff4d6d] text-[#ff4d6d] drop-shadow-md cursor-pointer animate-soft-pulse" />
+                    </motion.div>
+                  </div>
+
+                  {/* Main text content matching requested content word for word perfectly */}
+                  <h3 className="font-serif text-2xl sm:text-3xl text-stone-800 tracking-wide border-b border-pink-100 pb-3 font-semibold">
+                    My beloved Yumna,
+                  </h3>
+
+                  <div className="space-y-6 font-serif text-[16px] sm:text-lg md:text-xl text-stone-700/90 leading-relaxed font-light tracking-wide max-w-2xl mx-auto">
+                    <p className="transition-all hover:text-stone-900">
+                      You entered my life like a beautiful spring after a long winter.
+                    </p>
+
+                    <p className="transition-all hover:text-stone-900">
+                      Your smile brings peace to my heart.<br />
+                      Your voice feels like comfort.<br />
+                      Your presence makes ordinary moments extraordinary.
+                    </p>
+
+                    <p className="transition-all hover:text-stone-900 font-medium italic text-[#a03143]">
+                      If I could choose again, I would still choose you.
+                    </p>
+
+                    <p className="transition-all hover:text-stone-900">
+                      Every day I pray that Allah fills your life with happiness, protection, barakah and endless smiles.
+                    </p>
+
+                    <div className="w-12 h-[1px] bg-pink-200 mx-auto my-6" />
+
+                    <p className="transition-all hover:text-stone-900 leading-loose">
+                      No matter how many stars fill the sky,<br />
+                      none shine brighter than you in my eyes.
+                    </p>
+                  </div>
+
+                  <div className="pt-6 space-y-2 select-text">
+                    <p className="font-handwritten text-4xl sm:text-5xl text-[#b76e79]">
+                      Forever yours,
+                    </p>
+                    <p className="font-serif text-xl sm:text-2xl font-bold text-stone-800 tracking-wider flex items-center justify-center gap-1">
+                      Asim <Heart className="w-5 h-5 fill-[#ff4d6d] text-[#ff4d6d] inline animate-bounce" />
+                    </p>
+                  </div>
+
+                </div>
+              </motion.section>
+
+              {/* Part B: Interactive reasons I love you widget & counter */}
+              <motion.section 
+                initial={{ y: 40, opacity: 0 }}
+                whileInView={{ y: 0, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8 }}
+                className="w-full max-w-3xl space-y-6"
+              >
+                {/* Animated love counter banner */}
+                <div className="bg-white/50 backdrop-blur-md border border-[#ffccd5] rounded-2xl p-6 sm:p-8 text-center space-y-4 shadow-lg">
+                  <div className="flex items-center justify-center gap-2">
+                    <Sparkles className="w-5 h-5 text-yellow-500 fill-current animate-pulse" />
+                    <h4 className="font-serif text-lg sm:text-xl md:text-2xl text-stone-800 font-semibold tracking-wide">
+                      Reasons I Love You:
+                    </h4>
+                    <span className="text-xl sm:text-2xl md:text-3xl text-pink-500 font-bold tracking-widest flex items-center gap-1.5 animate-soft-pulse">
+                      Infinite ♾️
+                    </span>
+                  </div>
+
+                  <p className="font-sans text-[11px] sm:text-xs text-stone-500 uppercase tracking-widest leading-relaxed">
+                    Yumna, click below to reveal a tiny piece of my heart's infinite reasons
+                  </p>
+
+                  {/* Carousel cards of reasons */}
+                  <div className="relative min-h-[160px] flex items-center justify-center py-4">
+                    <AnimatePresence mode="wait">
+                      <motion.div
+                        key={activeReasonIndex}
+                        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                        transition={{ duration: 0.4 }}
+                        className="w-full max-w-xl mx-auto p-6 bg-gradient-to-br from-[#fffdfd] to-[#ffeef1] rounded-xl border border-pink-100 shadow-inner flex flex-col items-center justify-center min-h-[120px]"
+                      >
+                        <Heart className="w-4 h-4 fill-pink-400 text-pink-400 mb-3 animate-pulse" />
+                        <blockquote className="font-serif text-[15px] sm:text-lg md:text-xl text-stone-700 italic font-light leading-relaxed text-center px-4">
+                          "{loveReasons[activeReasonIndex]}"
+                        </blockquote>
+                        <span className="text-[11px] text-[#b76e79] font-sans mt-3 font-medium uppercase tracking-wider">
+                          Reason #{activeReasonIndex + 1} of Infinite
+                        </span>
+                      </motion.div>
+                    </AnimatePresence>
+                  </div>
+
+                  {/* Interactive Button to swap reasons with magic feedback */}
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Trigger a gentle explosion at cursor coordinates
+                        handleHeartExplosionStatic(e.clientX, e.clientY);
+                        setActiveReasonIndex((prev) => (prev + 1) % loveReasons.length);
+                      }}
+                      className="px-6 py-2.5 bg-white hover:bg-pink-50 text-[#b76e79] hover:text-[#a03143] rounded-full border border-pink-200 hover:border-[#b76e79] font-serif text-sm tracking-widest font-semibold transition-all duration-300 shadow-sm cursor-pointer select-none flex items-center gap-2"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-pink-400 group-hover:rotate-12 transition-transform" />
+                      Reveal Another Reason
+                    </button>
+                  </div>
+                </div>
+              </motion.section>
+
+              {/* Part C: Beautiful Glowing "Open My Heart" popup trigger */}
+              <motion.section
+                initial={{ scale: 0.95, opacity: 0 }}
+                whileInView={{ scale: 1, opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="py-6 flex flex-col items-center"
+              >
+                <button
+                  id="openHeartPopupBtn"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // Explode lots of hearts from screen center
+                    handleHeartExplosionStatic(window.innerWidth / 2, window.innerHeight / 2);
+                    setShowHeartModal(true);
+                  }}
+                  className="px-8 py-4 bg-gradient-to-r from-[#b76e79] via-[#da6a7e] to-[#a03143] hover:brightness-110 rounded-full text-white font-serif text-md tracking-wider font-semibold shadow-lg shadow-pink-200/50 hover:shadow-xl hover:shadow-pink-300/40 cursor-pointer select-none transition-all duration-300 flex items-center gap-3 animate-soft-pulse"
+                >
+                  <BookOpen className="w-4.5 h-4.5 text-pink-100" />
+                  Read My Secret Promise
+                </button>
+              </motion.section>
+
+              {/* Scroll down trigger indicator */}
+              <div className="pt-10 flex flex-col items-center gap-2 text-stone-400">
+                <span className="font-serif italic text-xs tracking-widest text-[#b76e79] uppercase">Scroll To The Horizon</span>
+                <ChevronDown className="w-4.5 h-4.5 text-[#b76e79] animate-bounce" />
+              </div>
+
+            </main>
+
+            {/* Bottom Footer Section: Final Grand Animation trigger zone */}
+            <footer className="w-full max-w-4xl px-4 py-24 text-center mt-20 relative flex flex-col items-center justify-center">
+              
+              {/* Grand Glowing Full Moon / Corona effect in the background */}
+              <div className="absolute -top-12 w-56 h-56 rounded-full bg-gradient-to-b from-[#fff3e0] to-transparent filter blur-3xl opacity-35 z-10 pointer-events-none mix-blend-screen animate-soft-pulse" />
+              
+              <div className="relative z-20 space-y-8 max-w-xl mx-auto bg-white/35 backdrop-blur-md rounded-2xl p-8 sm:p-12 border border-white/50 shadow-xl">
+                
+                {/* Glowing moon/sun graphic SVG */}
+                <div className="flex justify-center">
+                  <motion.div 
+                    className="relative"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 25, repeat: Infinity, ease: 'linear' }}
+                  >
+                    <div className="absolute inset-0 bg-[#ffd166] rounded-full blur-lg opacity-60 animate-pulse" />
+                    <svg className="w-16 h-16 text-[#ffd166] drop-shadow-xl select-none" fill="currentColor" viewBox="0 0 24 24">
+                      {/* Premium crescent star or fully radiant sun shape */}
+                      <path d="M12 3a9 9 0 1 0 9 9 9.75 9.75 0 0 0-.25-2 7.5 7.5 0 0 1-6.75-6.75A9 9 0 0 0 12 3z" />
+                    </svg>
+                  </motion.div>
+                </div>
+
+                {/* Final absolute prompt requirement text strictly verbatim */}
+                <div className="space-y-6 select-text">
+                  <h2 className="font-handwritten text-4xl sm:text-5xl text-[#a03143] tracking-wide font-medium">
+                    Yumna,
+                  </h2>
+                  
+                  <div className="font-serif text-lg sm:text-2xl text-stone-800 leading-relaxed font-light italic tracking-widest">
+                    "Thank you for existing.<br />
+                    Thank you for being you."
+                  </div>
+
+                  <div className="w-10 h-[1.5px] bg-[#b76e79] mx-auto my-4" />
+
+                  <div className="space-y-1">
+                    <p className="font-handwritten text-3xl text-[#b76e79]">
+                      Forever and always,
+                    </p>
+                    <p className="font-serif text-lg font-bold tracking-wider text-stone-800">
+                      Yours, Asim ❤️
+                    </p>
+                  </div>
+                </div>
+
+                {/* Sparkling bottom stamp */}
+                <div className="flex justify-center gap-1 text-[#b76e79] mt-6">
+                  <Star className="w-3.5 h-3.5 fill-[#ffd166] text-[#ffd166]" />
+                  <Star className="w-3.5 h-3.5 fill-[#ffd166] text-[#ffd166] scale-125" />
+                  <Star className="w-3.5 h-3.5 fill-[#ffd166] text-[#ffd166]" />
+                </div>
+
+              </div>
+
+              {/* Legal copyright and subtle credit credits */}
+              <div className="mt-16 text-[10px] text-[#b76e79]/60 font-sans tracking-[0.2em] uppercase select-none">
+                Handcrafted for Yumna • With Endless Barakah & Love
+              </div>
+            </footer>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Glassmorphism Popup Modal for custom Heart Reveal */}
+      <AnimatePresence>
+        {showHeartModal && (
+          <motion.div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowHeartModal(false)}
+          >
+            <motion.div 
+              className="relative max-w-md w-full bg-white/90 backdrop-blur-2xl rounded-3xl p-8 sm:p-10 border border-[#fff0f3] shadow-2xl text-center space-y-6 select-none"
+              initial={{ scale: 0.9, y: 30, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.9, y: 30, opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              onClick={(e) => e.stopPropagation()} // Prevent closing immediately
+            >
+              {/* Close Button top-right */}
+              <button 
+                onClick={() => setShowHeartModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-pink-50 text-stone-400 hover:text-stone-700 hover:rotate-90 transition-all duration-300 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              {/* Sparkles heart top symbol */}
+              <div className="flex justify-center">
+                <div className="p-4 bg-pink-100/50 rounded-full inline-block animate-soft-pulse">
+                  <Heart className="w-10 h-10 fill-[#ff4d6d] text-[#ff4d6d] drop-shadow-md" />
+                </div>
+              </div>
+
+              {/* Verbatim Secret Message specified in prompt */}
+              <div className="space-y-4">
+                <h4 className="font-serif text-[18px] sm:text-[20px] text-stone-800 font-semibold tracking-wide uppercase">
+                  My Infinite Promise
+                </h4>
+                <p className="font-serif text-xl sm:text-2xl text-transparent bg-clip-text bg-gradient-to-r from-[#b76e79] via-[#8c525a] to-[#a03143] leading-relaxed italic pr-1">
+                  "Yumna, if love had a name, it would be yours."
+                </p>
+              </div>
+
+              <div className="w-16 h-[1px] bg-pink-200 mx-auto" />
+
+              <p className="font-serif text-xs text-stone-500 max-w-xs mx-auto leading-relaxed italic">
+                "Every season of my soul smiles in the light of your warmth. Forever written in My Dua's."
+              </p>
+
+              {/* Acknowledge Button */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // Explode hearts inside the popup too!
+                  handleHeartExplosionStatic(window.innerWidth / 2, window.innerHeight / 2.2);
+                  setShowHeartModal(false);
+                }}
+                className="w-full py-3 bg-[#b76e79] hover:bg-[#a03143] text-white font-serif tracking-widest text-xs uppercase rounded-full shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer"
+              >
+                Accept My Infinite Love
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
